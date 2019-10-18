@@ -1,0 +1,54 @@
+version: "3"
+services:
+  dockerhost:
+    # https://github.com/qoomon/docker-host
+    # 由于 mac、linux 获取宿主机 IP 的方式不同，所以这里借助 dockerhost 容器做兼容。
+    image: qoomon/docker-host
+    container_name: xiaobei-dockerhost
+    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    restart: on-failure
+    networks:
+      - "common"
+  app:
+    build: ./project
+    image: xiaobei-app
+    container_name: xiaobei-app
+    restart: always
+    volumes:
+      - ./project:/var/www/html
+    networks:
+      - "common"
+    depends_on:
+      - dockerhost
+      - mysql
+  nginx:
+    image: nginx
+    container_name: xiaobei-nginx
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/log:/var/log/nginx
+    networks:
+      - "common"
+    depends_on:
+      - dockerhost
+      - app
+    ports:
+      - "8090:80"
+  mysql:
+    image: mysql:5.7
+    container_name: xiaobei-mysql
+    networks:
+      - "common"
+    depends_on:
+      - dockerhost
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "33061:3306"
+    volumes:
+      - "./docker/mysql/data:/var/lib/mysql"
+networks:
+  common:
+
+
